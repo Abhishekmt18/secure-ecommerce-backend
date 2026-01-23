@@ -53,8 +53,11 @@ public class OrderController {
                 fraudRequest,
                 FraudResponse.class
         );
+        String risk = fraudResponse != null ? fraudResponse.getResult() : "LOW";
 
-        if (fraudResponse != null && "BLOCKED".equals(fraudResponse.getResult())) {
+// 🔴 HIGH RISK → BLOCK
+        if ("HIGH".equals(risk)) {
+
             Transaction transaction = new Transaction();
             transaction.setUser(user);
             transaction.setAmount(totalAmount);
@@ -62,10 +65,38 @@ public class OrderController {
             transaction.setTransactionTime(LocalDateTime.now());
             transactionRepository.save(transaction);
 
-            return "Transaction blocked due to fraud risk";
+            return "Transaction blocked due to high fraud risk";
         }
 
+// 🟡 MEDIUM RISK → BIOMETRIC
+        if ("MEDIUM".equals(risk)) {
 
+            restTemplate.postForObject(
+                    "http://localhost:5000/biometric/verify",
+                    null,
+                    Object.class
+            );
+
+            Transaction transaction = new Transaction();
+            transaction.setUser(user);
+            transaction.setAmount(totalAmount);
+            transaction.setStatus("SUCCESS");
+            transaction.setTransactionTime(LocalDateTime.now());
+            transactionRepository.save(transaction);
+
+            Order order = new Order();
+            order.setUser(user);
+            order.setTotalAmount(totalAmount);
+            order.setStatus("CREATED");
+            order.setCreatedAt(LocalDateTime.now());
+            orderRepository.save(order);
+
+            cartItemRepository.deleteAll(cartItems);
+
+            return "Biometric verified. Order placed successfully";
+        }
+
+// 🟢 LOW RISK → DIRECT SUCCESS
         Order order = new Order();
         order.setUser(user);
         order.setTotalAmount(totalAmount);
@@ -76,7 +107,7 @@ public class OrderController {
         Transaction transaction = new Transaction();
         transaction.setUser(user);
         transaction.setAmount(totalAmount);
-        transaction.setStatus("SUCCESS"); // later AI will decide
+        transaction.setStatus("SUCCESS");
         transaction.setTransactionTime(LocalDateTime.now());
         transactionRepository.save(transaction);
 
