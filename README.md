@@ -176,6 +176,12 @@ http://localhost:5000
 * View transaction history
 
 ---
+## Related Microservice
+This backend communicates with an external Python-based
+AI fraud detection and biometric verification service.
+
+Python Service Repository:
+https://github.com/Abhishekmt18/secure-ecommerce-ai-biometric
 
 ## 🔄 Backend ↔ Python Communication
 
