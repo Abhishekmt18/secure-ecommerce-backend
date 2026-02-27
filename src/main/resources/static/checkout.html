@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Checkout</title>
+</head>
+<body>
+
+<h2>Checkout</h2>
+
+<button onclick="checkout()">Checkout</button>
+
+<p id="result"></p>
+
+<script>
+    const userId = 1;
+
+    function checkout() {
+        fetch(`/api/orders/checkout/${userId}`, {
+            method: 'POST'
+        })
+        .then(res => res.text())
+        .then(msg => {
+            document.getElementById("result").innerText = msg;
+        });
+    }
+</script>
+
+<br>
+<a href="index.html">Back to Products</a>
+
+</body>
+</html>

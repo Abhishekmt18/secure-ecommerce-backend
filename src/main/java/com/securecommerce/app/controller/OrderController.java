@@ -1,14 +1,21 @@
 package com.securecommerce.app.controller;
 
+import com.securecommerce.app.entity.CartItem;
+import com.securecommerce.app.entity.Order;
+import com.securecommerce.app.entity.Transaction;
+import com.securecommerce.app.entity.User;
+import com.securecommerce.app.enums.TransactionStatus;
+import com.securecommerce.app.repository.CartItemRepository;
+import com.securecommerce.app.repository.OrderRepository;
+import com.securecommerce.app.repository.TransactionRepository;
+import com.securecommerce.app.repository.UserRepository;
 import com.securecommerce.app.dto.FraudRequest;
 import com.securecommerce.app.dto.FraudResponse;
-import com.securecommerce.app.entity.*;
-import com.securecommerce.app.repository.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -19,18 +26,16 @@ public class OrderController {
     private UserRepository userRepository;
 
     @Autowired
-    private CartItemRepository cartItemRepository;
-
-    @Autowired
     private OrderRepository orderRepository;
 
     @Autowired
     private TransactionRepository transactionRepository;
 
-    //python merging
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private CartItemRepository cartItemRepository;
 
     @PostMapping("/checkout/{userId}")
     public String checkout(@PathVariable Long userId) {
@@ -39,80 +44,77 @@ public class OrderController {
         if (user == null) return "User not found";
 
         List<CartItem> cartItems = cartItemRepository.findByUser(user);
-        if (cartItems.isEmpty()) return "Cart is empty";
 
-        double totalAmount = 0;
+        double amount = 0;
         for (CartItem item : cartItems) {
-            totalAmount += item.getProduct().getPrice() * item.getQuantity();
+            amount += item.getProduct().getPrice() * item.getQuantity();
         }
-        FraudRequest fraudRequest = new FraudRequest();
-        fraudRequest.setAmount(totalAmount);
 
-        FraudResponse fraudResponse = restTemplate.postForObject(
+        FraudRequest request = new FraudRequest();
+        request.setAmount(amount);
+
+        FraudResponse response = restTemplate.postForObject(
                 "http://localhost:5000/fraud/check",
-                fraudRequest,
+                request,
                 FraudResponse.class
         );
-        String risk = fraudResponse != null ? fraudResponse.getResult() : "LOW";
 
-// 🔴 HIGH RISK → BLOCK
-        if ("HIGH".equals(risk)) {
+        String risk = response.getResult();
 
-            Transaction transaction = new Transaction();
-            transaction.setUser(user);
-            transaction.setAmount(totalAmount);
-            transaction.setStatus("FRAUD");
-            transaction.setTransactionTime(LocalDateTime.now());
-            transactionRepository.save(transaction);
+        if (risk.equals("HIGH")) {
 
-            return "Transaction blocked due to high fraud risk";
+            Transaction txn = new Transaction();
+            txn.setAmount(amount);
+            txn.setStatus(TransactionStatus.FRAUD.name());
+            txn.setUser(user);
+            transactionRepository.save(txn);
+
+            return "Transaction blocked due to HIGH fraud risk";
         }
 
-// 🟡 MEDIUM RISK → BIOMETRIC
-        if ("MEDIUM".equals(risk)) {
+        else if (risk.equals("MEDIUM")) {
 
-            restTemplate.postForObject(
+            // Simulate biometric verification
+            String biometricResponse = restTemplate.postForObject(
                     "http://localhost:5000/biometric/verify",
                     null,
-                    Object.class
+                    String.class
             );
 
-            Transaction transaction = new Transaction();
-            transaction.setUser(user);
-            transaction.setAmount(totalAmount);
-            transaction.setStatus("SUCCESS");
-            transaction.setTransactionTime(LocalDateTime.now());
-            transactionRepository.save(transaction);
+            if (!biometricResponse.contains("VERIFIED")) {
+                return "Biometric verification failed";
+            }
 
             Order order = new Order();
+            order.setTotalAmount(amount);
             order.setUser(user);
-            order.setTotalAmount(totalAmount);
-            order.setStatus("CREATED");
-            order.setCreatedAt(LocalDateTime.now());
             orderRepository.save(order);
 
+            Transaction txn = new Transaction();
+            txn.setAmount(amount);
+            txn.setStatus(TransactionStatus.SUCCESS.name());
+            txn.setUser(user);
+            transactionRepository.save(txn);
             cartItemRepository.deleteAll(cartItems);
 
-            return "Biometric verified. Order placed successfully";
+            return "Biometric Authentication Successful - Order Placed";
         }
 
-// 🟢 LOW RISK → DIRECT SUCCESS
-        Order order = new Order();
-        order.setUser(user);
-        order.setTotalAmount(totalAmount);
-        order.setStatus("CREATED");
-        order.setCreatedAt(LocalDateTime.now());
-        orderRepository.save(order);
+        else { // LOW
 
-        Transaction transaction = new Transaction();
-        transaction.setUser(user);
-        transaction.setAmount(totalAmount);
-        transaction.setStatus("SUCCESS");
-        transaction.setTransactionTime(LocalDateTime.now());
-        transactionRepository.save(transaction);
+            Order order = new Order();
+            order.setTotalAmount(amount);
+            order.setUser(user);
+            orderRepository.save(order);
 
-        cartItemRepository.deleteAll(cartItems);
+            Transaction txn = new Transaction();
+            txn.setAmount(amount);
+            txn.setStatus(TransactionStatus.SUCCESS.name());
+            txn.setUser(user);
+            transactionRepository.save(txn);
+            cartItemRepository.deleteAll(cartItems);
 
-        return "Order placed successfully";
+            return "Order placed successfully (LOW risk)";
+        }
     }
 }

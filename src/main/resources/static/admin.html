@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+</head>
+<body>
+
+<h2>Fraud Transactions</h2>
+<button onclick="loadFraud()">Load Fraud Transactions</button>
+
+<ul id="fraudList"></ul>
+
+<script>
+    function loadFraud() {
+        fetch('/api/admin/transactions/fraud')
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById("fraudList");
+                list.innerHTML = "";
+                data.forEach(t => {
+                    list.innerHTML += `
+                        <li>
+                            User: ${t.user.email} | Amount: ₹${t.amount} | Status: ${t.status}
+                        </li>
+                    `;
+                });
+            });
+    }
+</script>
+
+</body>
+</html>
+l>

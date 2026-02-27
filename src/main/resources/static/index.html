@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure E-Commerce</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f1f5f9;
+            margin: 0;
+        }
+
+        header {
+            background: linear-gradient(90deg, #1e3a8a, #2563eb);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+        }
+
+        button {
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+        }
+
+        .products {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .price {
+            font-size: 18px;
+            color: #2563eb;
+            font-weight: bold;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .low { background: #dcfce7; }
+        .medium { background: #fef9c3; }
+        .high { background: #fee2e2; }
+
+        .hidden { display: none; }
+
+        .success { color: green; }
+        .warn { color: orange; }
+        .error { color: red; }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    🔐 Secure E-Commerce with AI Fraud Detection
+</header>
+
+<div class="container">
+
+    <!-- LOGIN -->
+    <div id="loginBox" class="card">
+        <input id="email" placeholder="Email">
+        <input id="password" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p id="loginMsg"></p>
+    </div>
+
+    <!-- APP -->
+    <div id="appBox" class="hidden">
+
+        <div class="card success" id="welcome"></div>
+
+        <div class="card warn">
+            🧬 Biometric Authentication Enabled (Medium Risk)
+        </div>
+
+        <div class="card">
+            🤖 AI Fraud Detection Active
+        </div>
+
+        <div class="card" style="background:#f1f5f9;">
+            <b>Showing 3 products</b> across different <b>AI risk categories</b>
+        </div>
+
+
+        <div class="card">
+            <input placeholder="Search products" onkeyup="filterProducts(this.value)">
+            <select onchange="sortProducts(this.value)">
+                <option value="">Sort by Price</option>
+                <option value="low">Low → High</option>
+                <option value="high">High → Low</option>
+            </select>
+            <select onchange="filterByRisk(this.value)">
+                <option value="">Filter by AI Risk</option>
+                <option value="low">LOW</option>
+                <option value="medium">MEDIUM</option>
+                <option value="high">HIGH</option>
+            </select>
+        </div>
+
+        <div id="loader" class="hidden">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="card">
+            <h3>Products</h3>
+            <div class="products" id="productList"></div>
+        </div>
+
+        <div class="card">
+            <button onclick="checkout()">Checkout</button>
+            <p id="result"></p>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="card">
+            <h3>Transaction History</h3>
+            <button onclick="loadTransactions()">View Transactions</button>
+            <div id="txnList"></div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const API = "http://localhost:8080";
+    let userId = 4;
+    let allProducts = [];
+
+    function login() {
+        fetch(`${API}/api/users/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.value, password: password.value })
+        })
+        .then(res => res.text())
+        .then(msg => {
+            if (msg === "Login successful") {
+                loginBox.classList.add("hidden");
+                appBox.classList.remove("hidden");
+                welcome.innerText = "Welcome to Secure E-Commerce 👋";
+                loadProducts();
+            } else {
+                loginMsg.innerText = msg;
+            }
+        });
+    }
+
+    function loadProducts() {
+        loader.classList.remove("hidden");
+        fetch(`${API}/api/products`)
+            .then(res => res.json())
+            .then(data => {
+                allProducts = data;
+                renderProducts(data);
+                loader.classList.add("hidden");
+            });
+    }
+
+    function renderProducts(list) {
+        productList.innerHTML = "";
+        list.forEach(p => {
+            productList.innerHTML += `
+                <div class="card">
+                    <img src="${p.imageUrl}"
+                         onerror="this.src='https://picsum.photos/300/200?random=${p.id}'">
+                    <h4>${p.name}</h4>
+                    <p class="price">₹${p.price}</p>
+                    <span class="badge ${
+                    p.price <= 50000 ? 'low' :
+                    p.price <= 100000 ? 'medium' : 'high'
+                }">
+                    ${
+                        p.price <= 50000 ? 'AI: LOW RISK' :
+                        p.price <= 100000 ? 'AI: MEDIUM RISK' :
+                        'AI: HIGH RISK'
+                    }
+                </span>
+                    <br><br>
+                    <button onclick="addToCart(${p.id})">Add to Cart</button>
+                </div>`;
+        });
+    }
+
+    function filterProducts(text) {
+        renderProducts(allProducts.filter(p =>
+            p.name.toLowerCase().includes(text.toLowerCase())
+        ));
+    }
+
+    function sortProducts(type) {
+        let sorted = [...allProducts];
+        if (type === "low") sorted.sort((a,b)=>a.price-b.price);
+        if (type === "high") sorted.sort((a,b)=>b.price-a.price);
+        renderProducts(sorted);
+    }
+
+    function filterByRisk(level) {
+        if (!level) return renderProducts(allProducts);
+        renderProducts(allProducts.filter(p =>
+            level==="low"?p.price<=50000:
+            level==="medium"?p.price>50000&&p.price<=100000:
+            p.price>100000
+        ));
+    }
+
+    function checkout() {
+        result.innerText = "Processing...";
+        fetch(`${API}/api/orders/checkout/${userId}`, { method:"POST" })
+            .then(res=>res.text())
+            .then(msg=>result.innerText=msg);
+    }
+    function addToCart(productId) {
+    fetch(`${API}/api/cart/add?userId=${userId}&productId=${productId}&quantity=1`, {
+        method: "POST"
+    })
+    .then(res => res.text())
+    .then(msg => alert(msg));
+}
+
+    function loadTransactions() {
+    fetch(`${API}/api/transactions/${userId}`)
+        .then(res => res.json())
+        .then(txns => {
+            let html = `
+                <table style="width:100%; border-collapse:collapse">
+                    <tr>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                    </tr>
+            `;
+            txns.forEach(t => {
+                html += `
+                    <tr>
+                        <td>₹${t.amount}</td>
+                        <td>${t.status}</td>
+                        <td>${t.transactionTime}</td>
+                    </tr>
+                `;
+            });
+            html += "</table>";
+            document.getElementById("txnList").innerHTML = html;
+        });
+}
+
+</script>
+
+</body>
+</html>
