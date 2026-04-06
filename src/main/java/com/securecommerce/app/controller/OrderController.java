@@ -52,9 +52,15 @@ public class OrderController {
         if (user == null) return "User not found";
 
         double amount = 0;
+
         for (Map<String, Object> item : items) {
-            amount += Double.parseDouble(item.get("price").toString());
+            double price = Double.parseDouble(item.get("price").toString());
+            int quantity = Integer.parseInt(item.get("quantity").toString());
+
+            amount += price * quantity;   // ✅ FIX
         }
+
+        logger.info("Total calculated amount = {}", amount);
 
         FraudRequest request = new FraudRequest();
         request.setAmount(amount);
