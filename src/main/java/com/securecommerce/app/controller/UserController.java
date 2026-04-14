@@ -7,6 +7,7 @@ import com.securecommerce.app.dto.LoginResponse;
 import com.securecommerce.app.entity.User;
 import com.securecommerce.app.exception.InvalidCredentialsException;
 import com.securecommerce.app.repository.UserRepository;
+import com.securecommerce.app.service.UserService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,19 +33,12 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserService userService;
+
     @PostMapping("/register")
     public String register(@RequestBody User user) {
-
-        if (userRepository.findByEmail(user.getEmail()) != null) {
-            return "Email already exists";
-        }
-
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        user.setPassword(encoder.encode(user.getPassword()));
-
-        user.setRole("ROLE_USER"); // default role
-        userRepository.save(user);
-        return "User registered successfully";
+        return userService.register(user);
     }
 
     @Autowired

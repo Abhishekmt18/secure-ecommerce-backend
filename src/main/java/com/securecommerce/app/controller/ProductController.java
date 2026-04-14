@@ -23,7 +23,7 @@ public class ProductController {
     // Add product
     @PostMapping
     public Product addProduct(@RequestBody Product product) {
-        return productRepository.save(product);
+        return productService.save(product);
     }
 
     // Get all products

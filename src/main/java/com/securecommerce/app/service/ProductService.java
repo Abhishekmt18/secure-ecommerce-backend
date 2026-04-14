@@ -16,4 +16,7 @@ import org.springframework.stereotype.Service;
         public Page<Product> getAllProducts(Pageable pageable) {
             return productRepository.findAll(pageable);
         }
+        public Product save(Product product) {
+            return productRepository.save(product);
+        }
     }

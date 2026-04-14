@@ -45,7 +45,7 @@ public class OtpService {
         boolean isValid = storedOtp.equals(otp);
 
         if (isValid) {
-            otpStorage.remove(email); // ✅ important (cleanup)
+            otpStorage.remove(email); //  important (cleanup)
         }
 
         return isValid;

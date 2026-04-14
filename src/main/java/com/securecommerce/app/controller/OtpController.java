@@ -9,6 +9,7 @@ import com.securecommerce.app.repository.CartItemRepository;
 import com.securecommerce.app.repository.OrderRepository;
 import com.securecommerce.app.repository.TransactionRepository;
 import com.securecommerce.app.repository.UserRepository;
+import com.securecommerce.app.service.OrderService;
 import com.securecommerce.app.service.OtpService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +35,8 @@ public class OtpController {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private OrderService orderService;
 
     @Autowired
     private CartItemRepository cartItemRepository;
@@ -54,39 +57,6 @@ public class OtpController {
             return "INVALID_OTP";
         }
 
-        System.out.println("OTP verified for: " + email); // ✅ move here
-
-        // ✅ GET USER
-        User user = userRepository.findByEmail(email);
-
-        if (user == null) {
-            return "User not found";
-        }
-
-        // ✅ GET CART ITEMS
-        List<CartItem> cartItems = cartItemRepository.findByUser(user);
-
-        double amount = 0;
-        for (CartItem item : cartItems) {
-            amount += item.getProduct().getPrice() * item.getQuantity();
-        }
-
-        // ✅ CREATE ORDER
-        Order order = new Order();
-        order.setTotalAmount(amount);
-        order.setUser(user);
-        orderRepository.save(order);
-
-        // ✅ CREATE TRANSACTION
-        Transaction txn = new Transaction();
-        txn.setAmount(amount);
-        txn.setStatus(TransactionStatus.SUCCESS.name());
-        txn.setUser(user);
-        transactionRepository.save(txn);
-
-        // ✅ CLEAR CART
-        cartItemRepository.deleteAll(cartItems);
-
-        return "OTP_VERIFIED";
+        return orderService.verifyOtpAndPlaceOrder(email);
     }
-    }
+}

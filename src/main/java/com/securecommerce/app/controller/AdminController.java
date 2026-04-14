@@ -1,11 +1,8 @@
 package com.securecommerce.app.controller;
 
 import com.securecommerce.app.dto.TransactionResponse;
-import com.securecommerce.app.dto.UserResponse;
 import com.securecommerce.app.entity.Order;
-import com.securecommerce.app.entity.Transaction;
-import com.securecommerce.app.repository.OrderRepository;
-import com.securecommerce.app.repository.TransactionRepository;
+import com.securecommerce.app.service.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,57 +13,25 @@ import java.util.List;
 public class AdminController {
 
     @Autowired
-    private TransactionRepository transactionRepository;
+    private AdminService adminService;
 
-    @Autowired
-    private OrderRepository orderRepository;
-
-    // 1️⃣ View all transactions
     @GetMapping("/transactions")
     public List<TransactionResponse> getAllTransactions() {
-        return transactionRepository.findAll()
-                .stream()
-                .map(tx -> new TransactionResponse(
-                        tx.getId(),
-                        tx.getAmount(),
-                        tx.getStatus(),
-                        tx.getTransactionTime(),
-                        new UserResponse(
-                                tx.getUser().getId(),
-                                tx.getUser().getName(),
-                                tx.getUser().getEmail()
-                        )
-                ))
-                .toList();
+        return adminService.getAllTransactions();
     }
 
-    // 2️⃣ View only FRAUD transactions
     @GetMapping("/transactions/fraud")
     public List<TransactionResponse> getFraudTransactions() {
-        return transactionRepository.findByStatus("FRAUD")
-                .stream()
-                .map(tx -> new TransactionResponse(
-                        tx.getId(),
-                        tx.getAmount(),
-                        tx.getStatus(),
-                        tx.getTransactionTime(),
-                        new UserResponse(
-                                tx.getUser().getId(),
-                                tx.getUser().getName(),
-                                tx.getUser().getEmail()
-                        )
-                ))
-                .toList();
+        return adminService.getFraudTransactions();
     }
 
-    // 3️⃣ View all orders
     @GetMapping("/orders")
     public List<Order> getAllOrders() {
-        return orderRepository.findAll();
-    }
-        @GetMapping("/products")
-        public String getAllProductsForAdmin() {
-            return "Admin: All products accessed";
-        }
+        return adminService.getAllOrders();
     }
 
+    @GetMapping("/products")
+    public String getAllProductsForAdmin() {
+        return "Admin: All products accessed";
+    }
+}
